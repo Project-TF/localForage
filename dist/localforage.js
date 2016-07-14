@@ -4,6 +4,66 @@
     https://localforage.github.io/localForage
     (c) 2013-2017 Mozilla, Apache License 2.0
 */
+
+/**
+ * Detect Firefox SDK Addon environment and prepare some globals
+ *
+ * @author Dumitru Uzun (DUzun.Me)
+ */
+
+(function (undefined) {
+    // require's surrogate, to avoid interpretation by browserify and other tools
+    function req(mod) { return require(mod); }
+
+    var window = this;
+
+    // We need only Firefox SDK Addon environment
+    if ( typeof exports === "object" && typeof module !== "undefined" && window && window.Array === Array )
+    try {
+        // window is the sandbox global object
+        window.window = window;
+
+        // IndexedDB
+        expo(req('sdk/indexed-db'));
+
+        // Timers
+        if ( typeof setTimeout == 'undefined' ) {
+            expo(
+                req("sdk/timers")
+              , [
+                    'setTimeout'  , 'clearTimeout',
+                    'setImmediate', 'clearImmediate'
+                ]
+            );
+        }
+
+        // Hack to try and get some globals that are missing from sandboxed global space
+        // Blob, BlobBuilder, FileReader
+        var Cu = req('chrome').Cu;
+        var Services = Cu['import']("resource://gre/modules/Services.jsm", {});
+        var globs = ['Blob', 'BlobBuilder', 'FileReader'];
+        expo(Services, globs);
+        expo(Services.appShell && Services.appShell.hiddenDOMWindow, globs);
+
+    } catch(err) {
+        // console.log('error', err);
+    }
+
+    function expo(ctx, props) {
+        if ( !ctx ) return;
+        if ( !props ) props = Object.keys(ctx);
+        for(var i = props.length,p; i--;) {
+            p = props[i];
+            if ( ctx[p] != undefined ) {
+                if ( !(p in window) ) {
+                    window[p] = ctx[p];
+                }
+            }
+        }
+        return ctx;
+    }
+}());
+
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.localforage = f()}})(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw (f.code="MODULE_NOT_FOUND", f)}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(_dereq_,module,exports){
 (function (global){
 'use strict';
